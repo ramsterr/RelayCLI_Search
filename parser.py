@@ -14,10 +14,7 @@ def _build_entry(
 ) -> dict[str, Any]:
     
     doc = ast.get_docstring(node) or ""  
-    
-     #spilt lines takes the entire text of source and breaks into lines , /n at the end 
     source_code=ast.get_source_segment(raw_source,node)
-    
     if source_code is None:
         source_code = ast.unparse(node)   #fallback
     
@@ -69,34 +66,26 @@ and depending on what it is , it added it to results '''
 #Scan Directory will find all py files from the folders and use parse_file on each one of them
     
           
-def scan_directory(root: str | Path) -> list[dict[str, Any]]:
-    #convert root to a Path and find all .py files. The method is .rglob("*.py") (recursive glob). Write just this:
-    root_path = Path(root).resolve()  
-    #path(root) turns root lets say './src' into a path object with all methods
-    #it can sometimes give unpredictable paths , since it is relative
-    # so we use .resolve() to make the path absolute ex: 
-        # "./src" becomes /Users/ramster/Shadow Indexer/.../simplyCLI/src
-        #root_path = ... — stores it in a variable
+def _should_skip(path: Path, patterns: list[str] | None) -> bool:
+    if not patterns:
+        return False
+    for part in path.parts:
+        if part in patterns:
+            return True
+    return False
 
 
-    #Create an empty list and a for loop with rglob:
+def scan_directory(
+    root: str | Path,
+    ignore_patterns: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    root_path = Path(root).resolve()
     entries = []
-    
-    for py_file in sorted(root_path.rglob("*.py")):
-        
-        
-       # sorted() keeps the order consistent across runs. rglob("*.py") recursively finds every .py file under the directory.
-       # here rglob is recursive glob to find matches of *.py with files ending in py
-       # only glob would only look at top level folder
-        entries.extend(parse_file(py_file))
 
-        #we are using extend instead of .append() because we append will give us a list of lists
-        # extend: [1,2] with [3,4] is [1,2,3,4]
-        # append : [1,2] with [3,4] is [1,2,[3,4]]
-        #WE need one list so im taking a .extend 
-        
-        
-        
+    for py_file in sorted(root_path.rglob("*.py")):
+        if _should_skip(py_file, ignore_patterns):
+            continue
+        entries.extend(parse_file(py_file))
 
     return entries
         
